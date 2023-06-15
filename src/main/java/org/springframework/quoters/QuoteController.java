@@ -19,45 +19,89 @@ package org.springframework.quoters;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
-
+import lombok.extern.log4j.Log4j2;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Log4j2
 public class QuoteController {
 
-	private final static Quote NONE = new Quote("None");
-	private final static Random RANDOMIZER = new Random();
+    private final static Quote NONE = new Quote("None");
+    private final static Random RANDOMIZER = new Random();
 
-	private final QuoteRepository repository;
+    private final QuoteRepository repository;
 
-	public QuoteController(QuoteRepository repository) {
-		this.repository = repository;
-	}
+    public QuoteController(QuoteRepository repository) {
+        this.repository = repository;
+    }
 
-	@GetMapping("/api")
-	public List<QuoteResource> getAll() {
+    @GetMapping("/api")
+    public List<QuoteResource> getAll() {
+        return repository.findAll().stream()
+                .map(quote -> new QuoteResource(quote, "success"))
+                .collect(Collectors.toList());
+    }
 
-		return repository.findAll().stream()
-			.map(quote -> new QuoteResource(quote, "success"))
-			.collect(Collectors.toList());
-	}
+    @GetMapping("/api/{id}")
+    public QuoteResource getOne(@PathVariable Long id) {
+        return repository.findById(id)
+                .map(quote -> new QuoteResource(quote, "success"))
+                .orElse(new QuoteResource(NONE, "Quote " + id + " does not exist"));
+    }
 
-	@GetMapping("/api/{id}")
-	public QuoteResource getOne(@PathVariable Long id) {
+    @GetMapping("/api")
+    public QuoteResource getOneByRequestParam(@RequestParam Long id) {
+        return repository.findById(id)
+                .map(quote -> new QuoteResource(quote, "success"))
+                .orElse(new QuoteResource(NONE, "Quote " + id + " does not exist"));
+    }
 
-		return repository.findById(id)
-			.map(quote -> new QuoteResource(quote, "success"))
-			.orElse(new QuoteResource(NONE, "Quote " + id + " does not exist"));
-	}
+    @GetMapping("/api/random")
+    public QuoteResource getRandomOne() {
+        return getOne(nextLong(1, repository.count() + 1));
+    }
 
-	@GetMapping("/api/random")
-	public QuoteResource getRandomOne() {
-		return getOne(nextLong(1, repository.count() + 1));
-	}
+    private long nextLong(long lowerRange, long upperRange) {
+        return (long) (RANDOMIZER.nextDouble() * (upperRange - lowerRange)) + lowerRange;
+    }
 
-	private long nextLong(long lowerRange, long upperRange) {
-		return (long) (RANDOMIZER.nextDouble() * (upperRange - lowerRange)) + lowerRange;
-	}
+    // added by Bartlomiej Kalka
+    @GetMapping("/api")
+    public List<QuoteResource> getAllWithHeader(@RequestHeader(required = false) String requestId) {
+        return repository.findAll().stream()
+                .map(quote -> new QuoteResource(quote, "success and requestId was: " + requestId))
+                .collect(Collectors.toList());
+    }
+
+    // added by Bartlomiej Kalka
+    @PostMapping(path = "/api/quote")
+    public ResponseEntity<QuoteResource> addQuote(@RequestBody Quote quote) {
+        Quote save = repository.save(quote);
+        QuoteResource success = new QuoteResource(save, "success");
+        return ResponseEntity.ok(success);
+    }
+
+    // added by Bartlomiej Kalka
+    @DeleteMapping(path = "/api/quote/{id}")
+    public ResponseEntity<QuoteResource> deleteById(@PathVariable Long id) {
+        try {
+            repository.deleteById(id);
+        } catch (DataAccessException dataAccessException) {
+            log.error(dataAccessException.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new QuoteResource(NONE, "failed"));
+        }
+        return ResponseEntity.ok(new QuoteResource(NONE, "success"));
+    }
+
+
 }
