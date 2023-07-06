@@ -59,12 +59,6 @@ public class QuoteController {
                 .orElse(new QuoteResource(NONE, "Quote " + id + " does not exist"));
     }
 
-    @GetMapping("/api")
-    public QuoteResource getOneByRequestParam(@RequestParam Long id) {
-        return repository.findById(id)
-                .map(quote -> new QuoteResource(quote, "success"))
-                .orElse(new QuoteResource(NONE, "Quote " + id + " does not exist"));
-    }
 
     @GetMapping("/api/random")
     public QuoteResource getRandomOne() {
@@ -73,6 +67,14 @@ public class QuoteController {
 
     private long nextLong(long lowerRange, long upperRange) {
         return (long) (RANDOMIZER.nextDouble() * (upperRange - lowerRange)) + lowerRange;
+    }
+
+    // added by Bartlomiej Kalka
+    @GetMapping("/api")
+    public QuoteResource getOneByRequestParam(@RequestParam Long id) {
+        return repository.findById(id)
+                .map(quote -> new QuoteResource(quote, "success"))
+                .orElse(new QuoteResource(NONE, "Quote " + id + " does not exist"));
     }
 
     // added by Bartlomiej Kalka
