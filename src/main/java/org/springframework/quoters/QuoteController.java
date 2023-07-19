@@ -70,7 +70,7 @@ public class QuoteController {
     }
 
     // added by Bartlomiej Kalka
-    @GetMapping("/api")
+    @GetMapping("/apiWithRequestParam")
     public QuoteResource getOneByRequestParam(@RequestParam Long id) {
         return repository.findById(id)
                 .map(quote -> new QuoteResource(quote, "success"))
@@ -78,7 +78,7 @@ public class QuoteController {
     }
 
     // added by Bartlomiej Kalka
-    @GetMapping("/api")
+    @GetMapping("/apiWithHeader")
     public List<QuoteResource> getAllWithHeader(@RequestHeader(required = false) String requestId) {
         return repository.findAll().stream()
                 .map(quote -> new QuoteResource(quote, "success and requestId was: " + requestId))
